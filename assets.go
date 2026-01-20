@@ -26,7 +26,7 @@ func (cfg apiConfig) getAssetDiskPath(assetPath string) string {
 }
 
 func (cfg apiConfig) getAssetURL(assetPath string) string {
-	return fmt.Sprintf("http://localhost:%s/assets/%s", assetPath)
+	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, assetPath)
 }
 
 func mediaTypeToExt(mediaType string) string {
