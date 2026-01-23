@@ -9,6 +9,9 @@ import (
 )
 
 func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request) {
+	// Set limit on response body to 1 GB
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<30)
+
 	videoIDString := r.PathValue("videoID")
 	videoID, err := uuid.Parse(videoIDString)
 	if err != nil {
