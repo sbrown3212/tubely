@@ -1,8 +1,10 @@
 package main
 
 import (
+	"io"
 	"mime"
 	"net/http"
+	"os"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -60,6 +62,28 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 	if mediaType != "video/mp4" {
 		respondWithError(w, http.StatusBadRequest, "Invalid file type", nil)
+		return
+	}
+
+	tempFile, err := os.CreateTemp("", "tubely-upload.mp4")
+	if err != nil {
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't create temp file", err,
+		)
+		return
+	}
+	defer os.Remove("tubely-upload.mp4")
+	defer tempFile.Close()
+
+	_, err = io.Copy(tempFile, file)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't save video to disk", err)
+		return
+	}
+
+	_, err = tempFile.Seek(0, io.SeekStart)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't reset pointer", err)
 		return
 	}
 }
