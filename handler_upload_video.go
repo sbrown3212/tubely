@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
@@ -31,5 +30,18 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fmt.Println("Uploading video", videoID, "by user", userID)
+	dbVideo, err := cfg.db.GetVideo(videoID)
+	if err != nil {
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't find video metadata in db", err,
+		)
+		return
+	}
+
+	if dbVideo.UserID != userID {
+		respondWithError(
+			w, http.StatusUnauthorized, "Not authorized to update this video", nil,
+		)
+		return
+	}
 }
