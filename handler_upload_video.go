@@ -102,4 +102,15 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		)
 		return
 	}
+
+	url := cfg.getObjectURL(key)
+	dbVideo.VideoURL = &url
+
+	err = cfg.db.UpdateVideo(dbVideo)
+	if err != nil {
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't update videoURL", err,
+		)
+		return
+	}
 }
