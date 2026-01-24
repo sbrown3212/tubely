@@ -13,7 +13,8 @@ import (
 
 func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request) {
 	// Set limit on response body to 1 GB
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<30)
+	const uploadLimit = 1 << 30
+	r.Body = http.MaxBytesReader(w, r.Body, uploadLimit)
 
 	videoIDString := r.PathValue("videoID")
 	videoID, err := uuid.Parse(videoIDString)
@@ -62,7 +63,9 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if mediaType != "video/mp4" {
-		respondWithError(w, http.StatusBadRequest, "Invalid file type", nil)
+		respondWithError(
+			w, http.StatusBadRequest, "Invalid file type, only MP4 is allowed", nil,
+		)
 		return
 	}
 
@@ -73,7 +76,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		)
 		return
 	}
-	defer os.Remove("tubely-upload.mp4")
+	defer os.Remove(tempFile.Name())
 	defer tempFile.Close()
 
 	_, err = io.Copy(tempFile, file)
@@ -84,7 +87,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	_, err = tempFile.Seek(0, io.SeekStart)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't reset pointer", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't reset file pointer", err)
 		return
 	}
 
@@ -113,4 +116,6 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		)
 		return
 	}
+
+	respondWithJSON(w, http.StatusOK, dbVideo)
 }
