@@ -1,10 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"os"
+	"os/exec"
+	"path"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -92,7 +98,24 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	key := getAssetPath(mediaType)
+	aspectRatio, err := getVideoAspecRatio(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to deterime video aspect ratio", err)
+		return
+	}
+
+	var dir string
+	switch aspectRatio {
+	case "16:9":
+		dir = "landscape"
+	case "9:16":
+		dir = "portrait"
+	default:
+		dir = "other"
+	}
+
+	assetName := getAssetPath(mediaType)
+	key := path.Join(dir, assetName)
 
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      aws.String(cfg.s3Bucket),
@@ -119,4 +142,52 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, http.StatusOK, dbVideo)
+}
+
+func getVideoAspecRatio(filePath string) (string, error) {
+	cmd := exec.Command(
+		"ffprobe",
+		"-v", "error",
+		"-print_format", "json",
+		"-show_streams",
+		filePath,
+	)
+
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("ffprobe error: %w", err)
+	}
+
+	var output struct {
+		Streams []struct {
+			Height int `json:"height"`
+			Width  int `json:"width"`
+		} `json:"streams"`
+	}
+
+	err = json.Unmarshal(buf.Bytes(), &output)
+	if err != nil {
+		return "", fmt.Errorf("could not parse ffprobe output: %w", err)
+	}
+	if len(output.Streams) == 0 {
+		return "", errors.New("no video streams found")
+	}
+
+	vidWidth := output.Streams[0].Width
+	vidHeight := output.Streams[0].Height
+	aspectRatio := float64(vidWidth) / float64(vidHeight)
+	tolerance := 0.1
+	horizontalRatio := float64(16) / float64(9)
+	verticalRatio := float64(9) / float64(16)
+
+	if aspectRatio > horizontalRatio-tolerance {
+		return "16:9", nil
+	} else if aspectRatio < verticalRatio+tolerance {
+		return "9:16", nil
+	} else {
+		return "other", nil
+	}
 }
