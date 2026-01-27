@@ -98,6 +98,21 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	fastStartFileName, err := processVideoForFastStart(tempFile.Name())
+	if err != nil {
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't process video for fast start", err,
+		)
+		return
+	}
+
+	fastStartVideo, err := os.Open(fastStartFileName)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't open fast start video", err)
+	}
+	defer os.Remove(fastStartFileName)
+	defer fastStartVideo.Close()
+
 	aspectRatio, err := getVideoAspecRatio(tempFile.Name())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to deterime video aspect ratio", err)
@@ -120,7 +135,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      aws.String(cfg.s3Bucket),
 		Key:         aws.String(key),
-		Body:        tempFile,
+		Body:        fastStartVideo,
 		ContentType: aws.String(mediaType),
 	})
 	if err != nil {
