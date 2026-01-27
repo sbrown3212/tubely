@@ -88,13 +88,17 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	_, err = io.Copy(tempFile, file)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't save video to disk", err)
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't save video to disk", err,
+		)
 		return
 	}
 
 	_, err = tempFile.Seek(0, io.SeekStart)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't reset file pointer", err)
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't reset file pointer", err,
+		)
 		return
 	}
 
@@ -105,17 +109,22 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		)
 		return
 	}
+	defer os.Remove(fastStartFileName)
 
 	fastStartVideo, err := os.Open(fastStartFileName)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't open fast start video", err)
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't open fast start video", err,
+		)
+		return
 	}
-	defer os.Remove(fastStartFileName)
 	defer fastStartVideo.Close()
 
 	aspectRatio, err := getVideoAspecRatio(tempFile.Name())
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Unable to deterime video aspect ratio", err)
+		respondWithError(
+			w, http.StatusInternalServerError, "Unable to deterime video aspect ratio", err,
+		)
 		return
 	}
 
