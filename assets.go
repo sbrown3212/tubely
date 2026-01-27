@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -49,32 +46,4 @@ func mediaTypeToExt(mediaType string) string {
 		return ".bin"
 	}
 	return "." + parts[1]
-}
-
-func processVideoForFastStart(inputFilePath string) (string, error) {
-	outputFilePath := inputFilePath + ".processing"
-
-	cmd := exec.Command("ffmpeg",
-		"-i", inputFilePath,
-		"-c", "copy",
-		"-movflags", "faststart",
-		"-f", "mp4", outputFilePath,
-	)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return "", fmt.Errorf("error processing video: %s, %w", stderr.String(), err)
-	}
-
-	fileInfo, err := os.Stat(outputFilePath)
-	if err != nil {
-		return "", fmt.Errorf("could not stat processed file: %w", err)
-	}
-	if fileInfo.Size() == 0 {
-		return "", errors.New("processed file is empty")
-	}
-
-	return outputFilePath, nil
 }
