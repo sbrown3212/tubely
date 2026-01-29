@@ -154,7 +154,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	url := cfg.getObjectURL(key)
+	url := fmt.Sprintf("%s,%s", cfg.s3Bucket, key)
 	dbVideo.VideoURL = &url
 
 	err = cfg.db.UpdateVideo(dbVideo)
