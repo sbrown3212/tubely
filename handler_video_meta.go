@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
@@ -95,7 +96,15 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, video)
+	signedVideo, err := cfg.dbVideoToSignedVideo(video)
+	if err != nil {
+		respondWithError(
+			w, http.StatusInternalServerError, "Couldn't get presigned URL", err,
+		)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, signedVideo)
 }
 
 func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Request) {
@@ -116,5 +125,23 @@ func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, videos)
+	var signedVideos []database.Video
+	for _, video := range videos {
+		signedVideo, err := cfg.dbVideoToSignedVideo(video)
+		if err != nil {
+			fmt.Println("-- It looks like there is an error trying to get the presignd URL")
+			respondWithError(
+				w, http.StatusInternalServerError, "Couldn't get presigned URL", err,
+			)
+			return
+		}
+		signedVideos = append(signedVideos, signedVideo)
+	}
+
+	// TODO: figure out what the return data type was before `signedVideos`
+	// TODO: look into what app.js does when this function returns and empty slice
+	fmt.Printf("\nNumber of videos in db: %v\n\n", len(videos))
+	fmt.Printf("%#v", videos)
+
+	respondWithJSON(w, http.StatusOK, signedVideos)
 }
