@@ -165,15 +165,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	signedVideo, err := cfg.dbVideoToSignedVideo(dbVideo)
-	if err != nil {
-		respondWithError(
-			w, http.StatusInternalServerError, "Failed to get signed video", err,
-		)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, signedVideo)
+	respondWithJSON(w, http.StatusOK, dbVideo)
 }
 
 func getVideoAspecRatio(filePath string) (string, error) {
