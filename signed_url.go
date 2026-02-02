@@ -14,10 +14,11 @@ import (
 const presignedURLExpire = time.Minute * 5
 
 func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
-	fmt.Printf("\nVideo URL: %s\n\n", *video.VideoURL)
+	if video.VideoURL == nil || *video.VideoURL == "" {
+		return video, nil
+	}
 
 	parts := strings.Split(*video.VideoURL, ",")
-	// fmt.Printf("Parts: %s, %s\n", parts[0], parts[1])
 
 	if len(parts) != 2 {
 		return database.Video{}, errors.New("invalid format, want \"<bucket>,<key>\"")
